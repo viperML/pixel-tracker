@@ -1,9 +1,10 @@
 mod error;
 mod track;
-mod url;
+mod transport;
 
 use std::{collections::HashMap, fmt, net::SocketAddr, str::FromStr};
 
+use ::url::Url;
 use age::x25519::Identity;
 use axum::{
     extract::Query,
@@ -15,29 +16,37 @@ use axum_client_ip::SecureClientIpSource;
 use clap::Parser;
 use error::AppResult;
 use eyre::{bail, Result};
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use serde::{de, Deserialize, Deserializer, Serialize};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::{prelude::*, EnvFilter};
 
 use crate::error::AppError;
-use crate::url::EncInput;
+use crate::transport::EncInput;
 // use tracing_subscriber::
 
-#[derive(Debug, Parser)]
+#[derive(Parser)]
 struct Args {
-    /// Address to bind to.
-    #[arg(short, long, default_value = "0.0.0.0:8081")]
-    address: String,
-
+    /// Address to listen in
+    #[arg(short, long, default_value = "0.0.0.0:8080")]
+    listen: SocketAddr,
     /// URL base for creating links
     #[arg(long)]
-    url: String,
+    url: Url,
+    /// Age key
+    #[arg(long, env = "KEY")]
+    key: Identity,
 }
 
-static ID: OnceCell<Identity> = OnceCell::new();
-static URL_BASE: OnceCell<String> = OnceCell::new();
+struct Configuration {
+    args: Args,
+}
+
+static CONFIG: Lazy<Configuration> = Lazy::new(|| {
+    let args = Args::parse();
+    Configuration { args }
+});
 
 const INDEX: &'static str = r#"
 <!DOCTYPE html>
@@ -82,14 +91,6 @@ async fn main() -> Result<()> {
 
         color_eyre::install()?;
     }
-    let args = Args::parse();
-
-    ID.get_or_init(|| {
-        let key = std::env::var("KEY").expect("Reading age KEY from environment");
-        Identity::from_str(&key).expect("Parsing age key")
-    });
-
-    URL_BASE.set(args.url);
 
     let app = Router::new()
         .route("/", routing::get(router))
@@ -97,7 +98,7 @@ async fn main() -> Result<()> {
         .layer(SecureClientIpSource::ConnectInfo.into_extension())
         .layer(TraceLayer::new_for_http());
 
-    axum::Server::bind(&args.address.parse()?)
+    axum::Server::bind(&CONFIG.args.listen)
         .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await?;
 
@@ -128,16 +129,16 @@ async fn router(Query(params): Query<Params>) -> AppResult<Html<String>> {
         vars.insert("name", name.clone());
         vars.insert("webhook", webhook.clone());
 
-        let enc = crate::url::encrypt(
+        let enc = crate::transport::encrypt(
             EncInput {
                 name: name.clone(),
                 webhook: webhook.clone(),
             },
-            vec![Box::new(ID.get().unwrap().to_public())],
+            vec![Box::new(CONFIG.args.key.to_public())],
         )?;
 
-        let url = format!("{}/{}", URL_BASE.get().unwrap(), enc);
-        vars.insert("result", url);
+        let url = CONFIG.args.url.join(&enc)?;
+        vars.insert("result", url.to_string());
     }
 
     let render = handlebars.render_template(INDEX, &vars)?;

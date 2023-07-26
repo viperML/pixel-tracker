@@ -9,7 +9,7 @@ edition = "2021"
 age = { version = "0.9.2", features = ["armor"] }
 axum = { version = "0.6.19", features = ["tracing"] }
 axum-client-ip = "0.4.1"
-clap = { version = "4.3.19", features = ["derive"] }
+clap = { version = "4.3.19", features = ["derive", "env"] }
 color-eyre = "0.6.2"
 data-encoding = "2.4.0"
 eyre = "0.6.8"
@@ -24,3 +24,4 @@ tower-http = { version = "0.4.3", features = ["trace"] }
 tracing = "0.1.37"
 tracing-error = "0.2.0"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+url = "2.4.0"

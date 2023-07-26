@@ -13,17 +13,20 @@
       systems = ["x86_64-linux" "aarch64-linux"];
 
       perSystem = {pkgs, ...}: {
-        devShells.default = with pkgs; mkShell.override {
-          stdenv = stdenvAdapters.useMoldLinker pkgs.stdenv;
-        } {
-          packages = [
-            cargo
-            rustc
-            rust-analyzer-unwrapped
-            rustfmt
-          ];
-          RUST_SRC_PATH = "${rustPlatform.rustLibSrc}";
-        };
+        packages.default = pkgs.callPackage ./default.nix {src = inputs.self;};
+
+        devShells.default = with pkgs;
+          mkShell.override {
+            stdenv = stdenvAdapters.useMoldLinker pkgs.stdenv;
+          } {
+            packages = [
+              cargo
+              rustc
+              rust-analyzer-unwrapped
+              rustfmt
+            ];
+            RUST_SRC_PATH = "${rustPlatform.rustLibSrc}";
+          };
       };
     };
 }

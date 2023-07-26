@@ -1,23 +1,17 @@
 use std::io::{Read, Write};
 
-use age::{
-    armor::{ArmoredWriter, Format},
-    decryptor::{self, RecipientsDecryptor},
-    encrypted,
-    x25519::Identity,
-    Decryptor, Encryptor, Recipient,
-};
-use clap::Id;
-use serde::{Deserialize, Serialize};
-
+use age::{x25519::Identity, Decryptor, Encryptor, Recipient};
+use data_encoding::Encoding;
 use eyre::{ContextCompat, Result};
-use tracing::info;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct EncInput {
     pub(crate) name: String,
     pub(crate) webhook: String,
 }
+
+const ENCODING: Encoding = data_encoding::BASE64URL_NOPAD;
 
 pub(crate) fn encrypt(
     input: EncInput,
@@ -31,13 +25,13 @@ pub(crate) fn encrypt(
     writer.write_all(&inp_bytes)?;
     writer.finish()?;
 
-    let encrypted_encoded = data_encoding::BASE64URL.encode(&encrypted);
+    let encrypted_encoded = ENCODING.encode(&encrypted);
 
     Ok(encrypted_encoded)
 }
 
 pub(crate) fn decrypt(input: String, id: &Identity) -> Result<EncInput> {
-    let decoded = data_encoding::BASE64URL.decode(input.as_bytes())?;
+    let decoded = ENCODING.decode(input.as_bytes())?;
 
     let decryptor = match age::Decryptor::new(&decoded[..])? {
         Decryptor::Recipients(d) => d,

@@ -19,9 +19,9 @@ pub async fn tracker(
     Path(encoded): Path<String>,
     ip: SecureClientIp,
 ) -> AppResult<impl IntoResponse> {
-    let id = crate::ID.get().unwrap();
+    let id = &crate::CONFIG.args.key;
 
-    let result = crate::url::decrypt(encoded, &id)?;
+    let result = crate::transport::decrypt(encoded, &id)?;
     info!(?result);
 
     let http = Http::new("");
