@@ -9,20 +9,19 @@ use age::x25519::Identity;
 use axum::{
     extract::Query,
     response::Html,
-    routing::{self, post},
+    routing::{self},
     Router,
 };
 use axum_client_ip::SecureClientIpSource;
 use clap::Parser;
 use error::AppResult;
-use eyre::{bail, Result};
-use once_cell::sync::{Lazy, OnceCell};
+use eyre::Result;
+use once_cell::sync::Lazy;
 use serde::{de, Deserialize, Deserializer, Serialize};
 use tower_http::trace::TraceLayer;
-use tracing::info;
+
 use tracing_subscriber::{prelude::*, EnvFilter};
 
-use crate::error::AppError;
 use crate::transport::EncInput;
 // use tracing_subscriber::
 
@@ -104,8 +103,6 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-
-const TEMPL_NAME: &str = "index";
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Params {

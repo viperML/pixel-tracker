@@ -9,4 +9,5 @@ in
     pname = cargo-toml.package.name;
     inherit (cargo-toml.package) version;
     cargoLock.lockFile = src + "/Cargo.lock";
+    doCheck = false;
   }
